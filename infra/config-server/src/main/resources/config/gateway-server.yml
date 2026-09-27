@@ -1,0 +1,15 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: main-service
+          uri: lb://main-service
+          predicates:
+            - Path=/events/**,/categories/**,/compilations/**,/users/**,/admin/**

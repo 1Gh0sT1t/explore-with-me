@@ -8,11 +8,11 @@
         <artifactId>explore-with-me</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
-    <artifactId>stats-service</artifactId>
+    <artifactId>infra</artifactId>
     <packaging>pom</packaging>
     <modules>
-        <module>stats-dto</module>
-        <module>stats-server</module>
-        <module>stats-client</module>
+        <module>discovery-server</module>
+        <module>config-server</module>
+        <module>gateway-server</module>
     </modules>
 </project>

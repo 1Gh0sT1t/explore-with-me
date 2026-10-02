@@ -11,6 +11,11 @@
     <artifactId>core</artifactId>
     <packaging>pom</packaging>
     <modules>
+        <module>common</module>
         <module>main-service</module>
+        <module>event-service</module>
+        <module>user-service</module>
+        <module>request-service</module>
+        <module>comment-service</module>
     </modules>
 </project>

@@ -8,8 +8,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import ru.practicum.ewm.dto.CommentDto;
+import ru.practicum.ewm.dto.EventCommentKey;
+import ru.practicum.ewm.dto.EventCommentSearchParams;
 import ru.practicum.ewm.dto.internal.EventDetailsDto;
 import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.exception.NotFoundException;
@@ -71,7 +74,8 @@ class CommentServiceImplTest {
                 .thenReturn(new PageImpl<>(List.of(comment)));
         when(commentMapper.toDto(comment)).thenReturn(dto);
 
-        List<CommentDto> result = commentService.getEventComments(2L, 0, 10, request);
+        List<CommentDto> result = commentService.getEventComments(
+                new EventCommentSearchParams(2L, PageRequest.of(0, 10)), request);
 
         assertThat(result).extracting(CommentDto::getId).containsExactly(10L);
         verify(statsHelperService).hit(request);
@@ -82,7 +86,8 @@ class CommentServiceImplTest {
         when(remoteLookupService.getEvent(99L))
                 .thenThrow(new NotFoundException("Event with id=99 was not found"));
 
-        assertThatThrownBy(() -> commentService.getEventComments(99L, 0, 10, request))
+        assertThatThrownBy(() -> commentService.getEventComments(
+                new EventCommentSearchParams(99L, PageRequest.of(0, 10)), request))
                 .isInstanceOf(NotFoundException.class);
         verify(statsHelperService, never()).hit(any());
     }
@@ -92,7 +97,7 @@ class CommentServiceImplTest {
         Comment comment = comment(10L, CommentStatus.PENDING);
         when(commentRepository.findByIdAndEventId(10L, 2L)).thenReturn(Optional.of(comment));
 
-        assertThatThrownBy(() -> commentService.getEventComment(2L, 10L, request))
+        assertThatThrownBy(() -> commentService.getEventComment(new EventCommentKey(2L, 10L), request))
                 .isInstanceOf(NotFoundException.class);
         verify(statsHelperService, never()).hit(any());
     }
@@ -105,7 +110,7 @@ class CommentServiceImplTest {
                 .thenReturn(new PageImpl<>(List.of(comment)));
         when(commentMapper.toDto(comment)).thenReturn(dto);
 
-        assertThat(commentService.getAllComments("PENDING", 0, 10))
+        assertThat(commentService.getAllComments("PENDING", PageRequest.of(0, 10)))
                 .extracting(CommentDto::getStatus)
                 .containsExactly("PENDING");
     }

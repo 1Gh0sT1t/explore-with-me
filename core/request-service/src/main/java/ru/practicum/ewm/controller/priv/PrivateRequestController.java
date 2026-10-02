@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.dto.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.dto.ParticipationRequestDto;
+import ru.practicum.ewm.dto.internal.UserEventKey;
 import ru.practicum.ewm.service.RequestService;
 
 import java.util.List;
@@ -53,6 +54,6 @@ public class PrivateRequestController {
             @PathVariable Long eventId,
             @Valid @RequestBody EventRequestStatusUpdateRequest updateRequest) {
         log.info("PATCH /users/{}/events/{}/requests", userId, eventId);
-        return requestService.updateRequestsStatus(userId, eventId, updateRequest);
+        return requestService.updateRequestsStatus(new UserEventKey(userId, eventId), updateRequest);
     }
 }

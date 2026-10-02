@@ -1,7 +1,7 @@
 package ru.practicum.ewm.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.dto.CompilationDto;
 import ru.practicum.ewm.dto.EventShortDto;
@@ -66,12 +66,17 @@ public class CompilationServiceImpl implements CompilationService {
     }
 
     @Override
-    public List<CompilationDto> getCompilations(Boolean pinned, int from, int size) {
-        PageRequest pageRequest = PageRequest.of(from / size, size);
+    public List<CompilationDto> getCompilations(Boolean pinned, Pageable pageable) {
         List<Compilation> compilations = pinned == null
-                ? compilationRepository.findAll(pageRequest).getContent()
-                : compilationRepository.findAllByPinned(pinned, pageRequest).getContent();
-        return toDtos(compilations);
+                ? compilationRepository.findAll(pageable).getContent()
+                : compilationRepository.findAllByPinned(pinned, pageable).getContent();
+        if (compilations.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = compilations.stream().map(Compilation::getId).toList();
+        Map<Long, Compilation> loaded = compilationRepository.findAllWithEventsByIdIn(ids).stream()
+                .collect(Collectors.toMap(Compilation::getId, Function.identity()));
+        return toDtos(ids.stream().map(loaded::get).toList());
     }
 
     @Override

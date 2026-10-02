@@ -2,16 +2,18 @@ package ru.practicum.ewm.service.impl;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import ru.practicum.ewm.dto.CommentDto;
+import ru.practicum.ewm.dto.EventCommentKey;
+import ru.practicum.ewm.dto.EventCommentSearchParams;
 import ru.practicum.ewm.dto.NewCommentDto;
 import ru.practicum.ewm.dto.UpdateCommentDto;
 import ru.practicum.ewm.dto.UserDto;
 import ru.practicum.ewm.dto.UserShortDto;
+import ru.practicum.ewm.dto.UserCommentKey;
 import ru.practicum.ewm.dto.internal.EventDetailsDto;
+import ru.practicum.ewm.dto.internal.UserEventKey;
 import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.mapper.CommentMapper;
@@ -36,7 +38,9 @@ public class CommentServiceImpl implements CommentService {
     private final StatsHelperService statsHelperService;
 
     @Override
-    public CommentDto addComment(Long userId, Long eventId, NewCommentDto newCommentDto) {
+    public CommentDto addComment(UserEventKey key, NewCommentDto newCommentDto) {
+        Long userId = key.userId();
+        Long eventId = key.eventId();
         UserDto user = remoteLookupService.getUser(userId);
         EventDetailsDto event = remoteLookupService.getEvent(eventId);
         if (!"PUBLISHED".equals(event.getState())) {
@@ -53,14 +57,15 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public List<CommentDto> getUserComments(Long userId, int from, int size) {
+    public List<CommentDto> getUserComments(Long userId, Pageable pageable) {
         remoteLookupService.getUser(userId);
-        Pageable pageable = PageRequest.of(from / size, size);
         return toDtos(commentRepository.findByAuthorId(userId, pageable).getContent());
     }
 
     @Override
-    public CommentDto updateComment(Long userId, Long commentId, UpdateCommentDto updateCommentDto) {
+    public CommentDto updateComment(UserCommentKey key, UpdateCommentDto updateCommentDto) {
+        Long userId = key.userId();
+        Long commentId = key.commentId();
         UserDto user = remoteLookupService.getUser(userId);
         Comment comment = getComment(commentId);
         if (!comment.getAuthorId().equals(userId)) {
@@ -92,18 +97,20 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public List<CommentDto> getEventComments(Long eventId, int from, int size, HttpServletRequest request) {
+    public List<CommentDto> getEventComments(EventCommentSearchParams params, HttpServletRequest request) {
+        Long eventId = params.eventId();
         remoteLookupService.getEvent(eventId);
-        Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "created"));
         List<CommentDto> comments = toDtos(commentRepository
-                .findByEventIdAndStatus(eventId, CommentStatus.PUBLISHED, pageable)
+                .findByEventIdAndStatus(eventId, CommentStatus.PUBLISHED, params.pageable())
                 .getContent());
         statsHelperService.hit(request);
         return comments;
     }
 
     @Override
-    public CommentDto getEventComment(Long eventId, Long commentId, HttpServletRequest request) {
+    public CommentDto getEventComment(EventCommentKey key, HttpServletRequest request) {
+        Long eventId = key.eventId();
+        Long commentId = key.commentId();
         Comment comment = commentRepository.findByIdAndEventId(commentId, eventId)
                 .orElseThrow(() -> new NotFoundException("Comment with id=" + commentId + " was not found"));
         if (comment.getStatus() != CommentStatus.PUBLISHED) {
@@ -114,9 +121,8 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public List<CommentDto> getAllComments(String status, int from, int size) {
+    public List<CommentDto> getAllComments(String status, Pageable pageable) {
         CommentStatus commentStatus = CommentStatus.from(status);
-        Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "created"));
         return toDtos(commentRepository.findAllByStatus(commentStatus, pageable).getContent());
     }
 

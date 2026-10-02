@@ -25,22 +25,26 @@ public class EventDtoAssembler {
     private final StatsHelperService statsHelperService;
 
     public List<EventShortDto> toShortDtos(List<Event> events) {
-        Context context = loadContext(events);
+        return toShortDtos(events, null);
+    }
+
+    public List<EventShortDto> toShortDtos(List<Event> events, Map<Long, Long> confirmedRequests) {
+        Context context = loadContext(events, confirmedRequests);
         return events.stream()
                 .map(event -> {
                     EventShortDto dto = eventMapper.toShortDto(event);
-                    fill(dto, event, context);
+                    context.fill(dto, event);
                     return dto;
                 })
                 .toList();
     }
 
     public List<EventFullDto> toFullDtos(List<Event> events) {
-        Context context = loadContext(events);
+        Context context = loadContext(events, null);
         return events.stream()
                 .map(event -> {
                     EventFullDto dto = eventMapper.toFullDto(event);
-                    fill(dto, event, context);
+                    context.fill(dto, event);
                     return dto;
                 })
                 .toList();
@@ -61,7 +65,7 @@ public class EventDtoAssembler {
         return requestClient.getConfirmedRequests(eventIds(events));
     }
 
-    private Context loadContext(List<Event> events) {
+    private Context loadContext(List<Event> events, Map<Long, Long> confirmedRequests) {
         if (events.isEmpty()) {
             return new Context(Map.of(), Map.of(), Map.of(), Map.of());
         }
@@ -69,7 +73,7 @@ public class EventDtoAssembler {
         List<Long> userIds = events.stream().map(Event::getInitiatorId).distinct().toList();
         return new Context(
                 remoteUserService.getUsers(userIds),
-                requestClient.getConfirmedRequests(eventIds),
+                confirmedRequests == null ? requestClient.getConfirmedRequests(eventIds) : confirmedRequests,
                 commentClient.getPublishedCommentCounts(eventIds),
                 statsHelperService.getViews(events)
         );
@@ -79,21 +83,7 @@ public class EventDtoAssembler {
         return events.stream().map(Event::getId).toList();
     }
 
-    private void fill(EventShortDto dto, Event event, Context context) {
-        dto.setInitiator(user(event, context.users()));
-        dto.setConfirmedRequests(context.requests().getOrDefault(event.getId(), 0L));
-        dto.setComments(context.comments().getOrDefault(event.getId(), 0L));
-        dto.setViews(context.views().getOrDefault(event.getId(), 0L));
-    }
-
-    private void fill(EventFullDto dto, Event event, Context context) {
-        dto.setInitiator(user(event, context.users()));
-        dto.setConfirmedRequests(context.requests().getOrDefault(event.getId(), 0L));
-        dto.setComments(context.comments().getOrDefault(event.getId(), 0L));
-        dto.setViews(context.views().getOrDefault(event.getId(), 0L));
-    }
-
-    private UserShortDto user(Event event, Map<Long, UserDto> users) {
+    private static UserShortDto user(Event event, Map<Long, UserDto> users) {
         UserDto user = users.get(event.getInitiatorId());
         return user == null
                 ? new UserShortDto(event.getInitiatorId(), "")
@@ -106,5 +96,18 @@ public class EventDtoAssembler {
             Map<Long, Long> comments,
             Map<Long, Long> views
     ) {
+        private void fill(EventShortDto dto, Event event) {
+            dto.setInitiator(user(event, users));
+            dto.setConfirmedRequests(requests.getOrDefault(event.getId(), 0L));
+            dto.setComments(comments.getOrDefault(event.getId(), 0L));
+            dto.setViews(views.getOrDefault(event.getId(), 0L));
+        }
+
+        private void fill(EventFullDto dto, Event event) {
+            dto.setInitiator(user(event, users));
+            dto.setConfirmedRequests(requests.getOrDefault(event.getId(), 0L));
+            dto.setComments(comments.getOrDefault(event.getId(), 0L));
+            dto.setViews(views.getOrDefault(event.getId(), 0L));
+        }
     }
 }

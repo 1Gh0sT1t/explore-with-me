@@ -10,10 +10,12 @@ import org.springframework.stereotype.Service;
 import ru.practicum.ewm.dto.AdminEventSearchParams;
 import ru.practicum.ewm.dto.EventFullDto;
 import ru.practicum.ewm.dto.EventShortDto;
+import ru.practicum.ewm.dto.EventUpdateFields;
 import ru.practicum.ewm.dto.NewEventDto;
 import ru.practicum.ewm.dto.PublicEventSearchParams;
 import ru.practicum.ewm.dto.UpdateEventAdminRequest;
 import ru.practicum.ewm.dto.UpdateEventUserRequest;
+import ru.practicum.ewm.dto.internal.UserEventKey;
 import ru.practicum.ewm.exception.ConflictException;
 import ru.practicum.ewm.exception.NotFoundException;
 import ru.practicum.ewm.mapper.EventMapper;
@@ -74,15 +76,17 @@ public class EventServiceImpl implements EventService {
         );
 
         List<Event> events = eventRepository.findAll(specification, pageable).getContent();
+        Map<Long, Long> confirmed = null;
         if (Boolean.TRUE.equals(params.getOnlyAvailable())) {
-            Map<Long, Long> confirmed = eventDtoAssembler.getConfirmedRequests(events);
+            confirmed = eventDtoAssembler.getConfirmedRequests(events);
+            Map<Long, Long> confirmedCounts = confirmed;
             events = events.stream()
-                    .filter(event -> isAvailable(event, confirmed.getOrDefault(event.getId(), 0L)))
+                    .filter(event -> isAvailable(event, confirmedCounts.getOrDefault(event.getId(), 0L)))
                     .toList();
         }
 
         statsHelperService.hit(params.getRequest());
-        List<EventShortDto> result = eventDtoAssembler.toShortDtos(events);
+        List<EventShortDto> result = eventDtoAssembler.toShortDtos(events, confirmed);
         if ("VIEWS".equalsIgnoreCase(params.getSort())) {
             return result.stream()
                     .sorted(Comparator.comparing(EventShortDto::getViews).reversed())
@@ -102,9 +106,8 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public List<EventShortDto> getUserEvents(Long userId, int from, int size) {
+    public List<EventShortDto> getUserEvents(Long userId, Pageable pageable) {
         remoteUserService.getUser(userId);
-        Pageable pageable = PageRequest.of(from / size, size);
         return eventDtoAssembler.toShortDtos(
                 eventRepository.findByInitiatorId(userId, pageable).getContent()
         );
@@ -133,7 +136,9 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    public EventFullDto updateEventByUser(Long userId, Long eventId, UpdateEventUserRequest updateRequest) {
+    public EventFullDto updateEventByUser(UserEventKey key, UpdateEventUserRequest updateRequest) {
+        Long userId = key.userId();
+        Long eventId = key.eventId();
         remoteUserService.getUser(userId);
         Event event = eventRepository.findByIdAndInitiatorId(eventId, userId)
                 .orElseThrow(() -> new NotFoundException("Event with id=" + eventId + " was not found"));
@@ -151,10 +156,7 @@ public class EventServiceImpl implements EventService {
             }
         }
 
-        applyUpdate(event, updateRequest.getAnnotation(), updateRequest.getDescription(),
-                updateRequest.getTitle(), updateRequest.getCategory(), updateRequest.getPaid(),
-                updateRequest.getParticipantLimit(), updateRequest.getRequestModeration(),
-                updateRequest.getLocation(), updateRequest.getEventDate());
+        applyUpdate(event, updateRequest);
         return eventDtoAssembler.toFullDto(eventRepository.save(event));
     }
 
@@ -178,10 +180,7 @@ public class EventServiceImpl implements EventService {
             checkEventDate(updateRequest.getEventDate());
         }
 
-        applyUpdate(event, updateRequest.getAnnotation(), updateRequest.getDescription(),
-                updateRequest.getTitle(), updateRequest.getCategory(), updateRequest.getPaid(),
-                updateRequest.getParticipantLimit(), updateRequest.getRequestModeration(),
-                updateRequest.getLocation(), updateRequest.getEventDate());
+        applyUpdate(event, updateRequest);
 
         if (updateRequest.getStateAction() != null) {
             switch (updateRequest.getStateAction()) {
@@ -205,48 +204,37 @@ public class EventServiceImpl implements EventService {
         return eventDtoAssembler.toFullDto(eventRepository.save(event));
     }
 
-    private void applyUpdate(
-            Event event,
-            String annotation,
-            String description,
-            String title,
-            Long categoryId,
-            Boolean paid,
-            Integer participantLimit,
-            Boolean requestModeration,
-            ru.practicum.ewm.dto.LocationDto location,
-            LocalDateTime eventDate
-    ) {
-        if (annotation != null) {
-            event.setAnnotation(annotation);
+    private void applyUpdate(Event event, EventUpdateFields update) {
+        if (update.getAnnotation() != null) {
+            event.setAnnotation(update.getAnnotation());
         }
-        if (description != null) {
-            event.setDescription(description);
+        if (update.getDescription() != null) {
+            event.setDescription(update.getDescription());
         }
-        if (title != null) {
-            event.setTitle(title);
+        if (update.getTitle() != null) {
+            event.setTitle(update.getTitle());
         }
-        if (categoryId != null) {
-            event.setCategory(getCategory(categoryId));
+        if (update.getCategory() != null) {
+            event.setCategory(getCategory(update.getCategory()));
         }
-        if (paid != null) {
-            event.setPaid(paid);
+        if (update.getPaid() != null) {
+            event.setPaid(update.getPaid());
         }
-        if (participantLimit != null) {
-            event.setParticipantLimit(participantLimit);
+        if (update.getParticipantLimit() != null) {
+            event.setParticipantLimit(update.getParticipantLimit());
         }
-        if (requestModeration != null) {
-            event.setRequestModeration(requestModeration);
+        if (update.getRequestModeration() != null) {
+            event.setRequestModeration(update.getRequestModeration());
         }
-        if (location != null) {
+        if (update.getLocation() != null) {
             if (event.getLocation() == null) {
                 event.setLocation(new Location());
             }
-            event.getLocation().setLat(location.getLat());
-            event.getLocation().setLon(location.getLon());
+            event.getLocation().setLat(update.getLocation().getLat());
+            event.getLocation().setLon(update.getLocation().getLon());
         }
-        if (eventDate != null) {
-            event.setEventDate(eventDate);
+        if (update.getEventDate() != null) {
+            event.setEventDate(update.getEventDate());
         }
     }
 

@@ -4,6 +4,8 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -26,7 +28,8 @@ public class AdminCommentController {
                                            @RequestParam(defaultValue = "0") @PositiveOrZero int from,
                                            @RequestParam(defaultValue = "10") @Positive int size) {
         log.info("GET /admin/comments - status={}, from={}, size={}", status, from, size);
-        return commentService.getAllComments(status, from, size);
+        return commentService.getAllComments(status,
+                PageRequest.of(from / size, size, Sort.by(Sort.Direction.DESC, "created")));
     }
 
     @PatchMapping("/{commentId}/publish")

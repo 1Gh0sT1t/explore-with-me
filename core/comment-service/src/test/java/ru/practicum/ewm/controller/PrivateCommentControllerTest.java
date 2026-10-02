@@ -6,13 +6,16 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.ewm.controller.priv.PrivateCommentController;
 import ru.practicum.ewm.dto.CommentDto;
 import ru.practicum.ewm.dto.NewCommentDto;
 import ru.practicum.ewm.dto.UpdateCommentDto;
+import ru.practicum.ewm.dto.UserCommentKey;
 import ru.practicum.ewm.dto.UserShortDto;
+import ru.practicum.ewm.dto.internal.UserEventKey;
 import ru.practicum.ewm.service.CommentService;
 
 import java.time.LocalDateTime;
@@ -44,7 +47,7 @@ class PrivateCommentControllerTest {
 
         CommentDto response = commentDto();
 
-        Mockito.when(commentService.addComment(eq(1L), eq(2L), any(NewCommentDto.class)))
+        Mockito.when(commentService.addComment(eq(new UserEventKey(1L, 2L)), any(NewCommentDto.class)))
                 .thenReturn(response);
 
         mockMvc.perform(post("/users/{userId}/events/{eventId}/comments", 1L, 2L)
@@ -60,7 +63,7 @@ class PrivateCommentControllerTest {
 
     @Test
     void getUserComments_shouldReturnComments() throws Exception {
-        Mockito.when(commentService.getUserComments(1L, 0, 10))
+        Mockito.when(commentService.getUserComments(1L, PageRequest.of(0, 10)))
                 .thenReturn(List.of(commentDto()));
 
         mockMvc.perform(get("/users/{userId}/comments", 1L)
@@ -91,7 +94,7 @@ class PrivateCommentControllerTest {
                         .build())
                 .build();
 
-        Mockito.when(commentService.updateComment(eq(1L), eq(10L), any(UpdateCommentDto.class)))
+        Mockito.when(commentService.updateComment(eq(new UserCommentKey(1L, 10L)), any(UpdateCommentDto.class)))
                 .thenReturn(response);
 
         mockMvc.perform(patch("/users/{userId}/comments/{commentId}", 1L, 10L)

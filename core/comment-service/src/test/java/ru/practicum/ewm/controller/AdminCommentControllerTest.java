@@ -5,6 +5,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.ewm.controller.admin.AdminCommentController;
 import ru.practicum.ewm.dto.CommentDto;
@@ -30,7 +32,8 @@ class AdminCommentControllerTest {
 
     @Test
     void getAllComments_shouldReturnComments() throws Exception {
-        Mockito.when(commentService.getAllComments(eq("PENDING"), eq(0), eq(10)))
+        Mockito.when(commentService.getAllComments(eq("PENDING"),
+                eq(PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "created")))))
                 .thenReturn(List.of(commentDto("PENDING")));
 
         mockMvc.perform(get("/admin/comments")
@@ -45,7 +48,8 @@ class AdminCommentControllerTest {
 
     @Test
     void getAllComments_withoutStatus_shouldReturnComments() throws Exception {
-        Mockito.when(commentService.getAllComments(eq(null), eq(0), eq(10)))
+        Mockito.when(commentService.getAllComments(eq(null),
+                eq(PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "created")))))
                 .thenReturn(List.of(commentDto("PENDING")));
 
         mockMvc.perform(get("/admin/comments"))

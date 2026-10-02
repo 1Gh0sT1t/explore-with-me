@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -12,6 +13,7 @@ import ru.practicum.ewm.dto.EventFullDto;
 import ru.practicum.ewm.dto.EventShortDto;
 import ru.practicum.ewm.dto.NewEventDto;
 import ru.practicum.ewm.dto.UpdateEventUserRequest;
+import ru.practicum.ewm.dto.internal.UserEventKey;
 import ru.practicum.ewm.service.EventService;
 
 import java.util.List;
@@ -30,7 +32,7 @@ public class PrivateEventController {
                                              @RequestParam(defaultValue = "0") @PositiveOrZero int from,
                                              @RequestParam(defaultValue = "10") @Positive int size) {
         log.info("GET /users/{}/events - from={}, size={}", userId, from, size);
-        return eventService.getUserEvents(userId, from, size);
+        return eventService.getUserEvents(userId, PageRequest.of(from / size, size));
     }
 
     @PostMapping
@@ -53,6 +55,6 @@ public class PrivateEventController {
                                     @PathVariable Long eventId,
                                     @Valid @RequestBody UpdateEventUserRequest updateRequest) {
         log.info("PATCH /users/{}/events/{}", userId, eventId);
-        return eventService.updateEventByUser(userId, eventId, updateRequest);
+        return eventService.updateEventByUser(new UserEventKey(userId, eventId), updateRequest);
     }
 }

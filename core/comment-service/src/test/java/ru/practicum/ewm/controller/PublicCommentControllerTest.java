@@ -6,9 +6,13 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.ewm.controller.publicapi.PublicCommentController;
 import ru.practicum.ewm.dto.CommentDto;
+import ru.practicum.ewm.dto.EventCommentKey;
+import ru.practicum.ewm.dto.EventCommentSearchParams;
 import ru.practicum.ewm.dto.UserShortDto;
 import ru.practicum.ewm.service.CommentService;
 
@@ -32,7 +36,9 @@ class PublicCommentControllerTest {
 
     @Test
     void getEventComments_shouldReturnPublishedComments() throws Exception {
-        Mockito.when(commentService.getEventComments(eq(2L), eq(0), eq(10), any(HttpServletRequest.class)))
+        PageRequest pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "created"));
+        Mockito.when(commentService.getEventComments(
+                eq(new EventCommentSearchParams(2L, pageable)), any(HttpServletRequest.class)))
                 .thenReturn(List.of(commentDto()));
 
         mockMvc.perform(get("/events/{eventId}/comments", 2L)
@@ -46,7 +52,7 @@ class PublicCommentControllerTest {
 
     @Test
     void getEventComment_shouldReturnComment() throws Exception {
-        Mockito.when(commentService.getEventComment(eq(2L), eq(10L), any(HttpServletRequest.class)))
+        Mockito.when(commentService.getEventComment(eq(new EventCommentKey(2L, 10L)), any(HttpServletRequest.class)))
                 .thenReturn(commentDto());
 
         mockMvc.perform(get("/events/{eventId}/comments/{commentId}", 2L, 10L))

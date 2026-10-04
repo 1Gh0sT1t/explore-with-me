@@ -1,6 +1,5 @@
 package ru.practicum.ewm.service;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Pageable;
 import ru.practicum.ewm.dto.*;
 import ru.practicum.ewm.dto.internal.UserEventKey;
@@ -11,7 +10,11 @@ public interface EventService {
 
     List<EventShortDto> getPublicEvents(PublicEventSearchParams params);
 
-    EventFullDto getPublicEvent(Long eventId, HttpServletRequest request);
+    EventFullDto getPublicEvent(Long eventId, Long userId);
+
+    List<EventShortDto> getRecommendations(Long userId, int size);
+
+    void likeEvent(UserEventKey key);
 
     List<EventShortDto> getUserEvents(Long userId, Pageable pageable);
 

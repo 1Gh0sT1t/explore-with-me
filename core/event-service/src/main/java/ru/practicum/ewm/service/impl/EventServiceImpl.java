@@ -1,6 +1,5 @@
 package ru.practicum.ewm.service.impl;
 
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,6 +29,8 @@ import ru.practicum.ewm.service.EventService;
 import ru.practicum.ewm.service.RemoteUserService;
 import ru.practicum.ewm.service.StatsHelperService;
 import ru.practicum.ewm.specification.EventSpecification;
+import ru.practicum.ewm.client.RequestClient;
+import ru.practicum.ewm.stats.proto.RecommendedEventProto;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -50,6 +51,7 @@ public class EventServiceImpl implements EventService {
     private final EventDtoAssembler eventDtoAssembler;
     private final RemoteUserService remoteUserService;
     private final StatsHelperService statsHelperService;
+    private final RequestClient requestClient;
 
     @Override
     public List<EventShortDto> getPublicEvents(PublicEventSearchParams params) {
@@ -85,24 +87,51 @@ public class EventServiceImpl implements EventService {
                     .toList();
         }
 
-        statsHelperService.hit(params.getRequest());
         List<EventShortDto> result = eventDtoAssembler.toShortDtos(events, confirmed);
-        if ("VIEWS".equalsIgnoreCase(params.getSort())) {
+        if ("RATING".equalsIgnoreCase(params.getSort())) {
             return result.stream()
-                    .sorted(Comparator.comparing(EventShortDto::getViews).reversed())
+                    .sorted(Comparator.comparingDouble(EventShortDto::getRating).reversed())
                     .toList();
         }
         return result;
     }
 
     @Override
-    public EventFullDto getPublicEvent(Long eventId, HttpServletRequest request) {
+    public EventFullDto getPublicEvent(Long eventId, Long userId) {
         Event event = getEvent(eventId);
         if (event.getState() != EventState.PUBLISHED) {
             throw new NotFoundException("Event with id=" + eventId + " was not found");
         }
-        statsHelperService.hit(request);
+        remoteUserService.getUser(userId);
+        statsHelperService.view(userId, eventId);
         return eventDtoAssembler.toFullDto(event);
+    }
+
+    @Override
+    public List<EventShortDto> getRecommendations(Long userId, int size) {
+        remoteUserService.getUser(userId);
+        List<RecommendedEventProto> recommendations = statsHelperService.recommendations(userId, size);
+        if (recommendations.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, Event> events = eventRepository.findAllWithCategoryByIdIn(recommendations.stream()
+                        .map(RecommendedEventProto::getEventId).toList()).stream()
+                .filter(event -> event.getState() == EventState.PUBLISHED)
+                .collect(java.util.stream.Collectors.toMap(Event::getId, event -> event));
+        List<Event> ordered = recommendations.stream().map(item -> events.get(item.getEventId()))
+                .filter(java.util.Objects::nonNull).toList();
+        return eventDtoAssembler.toShortDtos(ordered);
+    }
+
+    @Override
+    public void likeEvent(UserEventKey key) {
+        Event event = getEvent(key.eventId());
+        remoteUserService.getUser(key.userId());
+        if (event.getState() != EventState.PUBLISHED || event.getEventDate().isAfter(LocalDateTime.now())
+                || !requestClient.hasConfirmedRequest(key.userId(), key.eventId())) {
+            throw new IllegalArgumentException("Лайк можно поставить только посещённому мероприятию");
+        }
+        statsHelperService.like(key.userId(), key.eventId());
     }
 
     @Override

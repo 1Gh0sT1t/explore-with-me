@@ -43,6 +43,9 @@ import static org.mockito.Mockito.when;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class RequestStatusUpdateTest {
 
+    @MockBean
+    private RequestRegistrationService registrationService;
+
     private static final UserEventKey KEY = new UserEventKey(10L, 2L);
 
     @Autowired

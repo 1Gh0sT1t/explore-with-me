@@ -41,7 +41,8 @@ public class ErrorHandler {
         return error(exception, "For the requested operation the conditions are not met.", "CONFLICT");
     }
 
-    @ExceptionHandler({ServiceUnavailableException.class, RetryableException.class})
+    @ExceptionHandler({ServiceUnavailableException.class, RetryableException.class,
+            ru.practicum.stats.client.exception.StatsServerUnavailableException.class})
     @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
     public ApiError handleServiceUnavailableException(Exception exception) {
         return error(exception, "Dependent service is unavailable.", "SERVICE_UNAVAILABLE");

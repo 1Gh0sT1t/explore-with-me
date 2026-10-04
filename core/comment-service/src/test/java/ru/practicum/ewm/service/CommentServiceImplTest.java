@@ -49,9 +49,6 @@ class CommentServiceImplTest {
     private RemoteLookupService remoteLookupService;
 
     @Mock
-    private StatsHelperService statsHelperService;
-
-    @Mock
     private HttpServletRequest request;
 
     @InjectMocks
@@ -78,7 +75,6 @@ class CommentServiceImplTest {
                 new EventCommentSearchParams(2L, PageRequest.of(0, 10)), request);
 
         assertThat(result).extracting(CommentDto::getId).containsExactly(10L);
-        verify(statsHelperService).hit(request);
     }
 
     @Test
@@ -89,7 +85,6 @@ class CommentServiceImplTest {
         assertThatThrownBy(() -> commentService.getEventComments(
                 new EventCommentSearchParams(99L, PageRequest.of(0, 10)), request))
                 .isInstanceOf(NotFoundException.class);
-        verify(statsHelperService, never()).hit(any());
     }
 
     @Test
@@ -99,7 +94,6 @@ class CommentServiceImplTest {
 
         assertThatThrownBy(() -> commentService.getEventComment(new EventCommentKey(2L, 10L), request))
                 .isInstanceOf(NotFoundException.class);
-        verify(statsHelperService, never()).hit(any());
     }
 
     @Test

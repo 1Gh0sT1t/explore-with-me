@@ -25,6 +25,9 @@ import static org.mockito.Mockito.when;
 class RequestServiceImplTest {
 
     @Mock
+    private RequestRegistrationService registrationService;
+
+    @Mock
     private RequestRepository requestRepository;
 
     @Mock
@@ -41,7 +44,7 @@ class RequestServiceImplTest {
         EventDetailsDto event = event(2L, 10L, 5, false);
         when(remoteLookupService.getUser(1L)).thenReturn(new UserDto());
         when(remoteLookupService.getEvent(2L)).thenReturn(event);
-        when(requestRepository.save(any(Request.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(registrationService.save(any(Request.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(requestMapper.toDto(any(Request.class))).thenAnswer(invocation -> {
             Request request = invocation.getArgument(0);
             return ParticipationRequestDto.builder().status(request.getStatus().name()).build();
@@ -50,6 +53,7 @@ class RequestServiceImplTest {
         ParticipationRequestDto result = requestService.addRequest(1L, 2L);
 
         assertThat(result.getStatus()).isEqualTo("CONFIRMED");
+        verify(registrationService).save(any(Request.class));
     }
 
     @Test

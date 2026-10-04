@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import ru.practicum.ewm.model.RequestStatus;
 import ru.practicum.ewm.repository.RequestRepository;
 
@@ -18,6 +20,11 @@ import java.util.stream.Collectors;
 public class InternalRequestController {
 
     private final RequestRepository requestRepository;
+
+    @GetMapping("/users/{userId}/events/{eventId}/confirmed")
+    public boolean hasConfirmedRequest(@PathVariable Long userId, @PathVariable Long eventId) {
+        return requestRepository.existsByEventIdAndRequesterIdAndStatus(eventId, userId, RequestStatus.CONFIRMED);
+    }
 
     @PostMapping("/counts")
     public Map<Long, Long> getConfirmedRequests(@RequestBody List<Long> eventIds) {

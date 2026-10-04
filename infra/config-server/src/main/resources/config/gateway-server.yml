@@ -9,10 +9,6 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
-        - id: stats-server
-          uri: lb://stats-server
-          predicates:
-            - Path=/hit,/stats
         - id: comment-service
           uri: lb://comment-service
           predicates:

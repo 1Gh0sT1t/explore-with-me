@@ -11,6 +11,11 @@ import java.util.stream.Collectors;
 public class RequestClientFallback implements RequestClient {
 
     @Override
+    public boolean hasConfirmedRequest(Long userId, Long eventId) {
+        throw new ru.practicum.ewm.exception.ServiceUnavailableException("Request service is unavailable", null);
+    }
+
+    @Override
     public Map<Long, Long> getConfirmedRequests(List<Long> eventIds) {
         return eventIds.stream().collect(Collectors.toMap(Function.identity(), ignored -> 0L));
     }

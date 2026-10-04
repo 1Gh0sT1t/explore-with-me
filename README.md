@@ -1,164 +1,89 @@
 # Explore With Me
 
-Backend-сервис для публикации событий, подбора мероприятий и управления заявками на участие.
-
-Проект реализует REST API для основной платформы событий и отдельного сервиса статистики просмотров.
+Backend для публикации событий, подбора мероприятий, управления заявками и комментариями.
 
 ## Стек
 
 - Java 21
-- Spring Boot 3.3.0
-- Spring Cloud 2023.0.2
-- Spring Cloud Config, Netflix Eureka, Gateway
-- Spring Web
+- Spring Boot 3.3
+- Spring Cloud Config, Netflix Eureka, Gateway, OpenFeign
+- Resilience4j и Spring Retry
 - Spring Data JPA
-- Hibernate
 - PostgreSQL
 - Maven
-- Docker / Docker Compose
-- Checkstyle
-- SpotBugs
-- JaCoCo
-
-## Описание проекта
-
-Explore With Me позволяет пользователям создавать события, подавать заявки на участие, модерировать публикации и
-получать подборки мероприятий.
-
-Проект разделён на прикладные и инфраструктурные модули:
-
-- `core/main-service` — публичный, приватный и административный API;
-- `stats-service` — DTO, клиент и сервер статистики;
-- `infra/discovery-server` — реестр сервисов Eureka;
-- `infra/config-server` — централизованные конфигурации;
-- `infra/gateway-server` — единая точка входа и маршрутизация API.
-
-## Основные возможности
-
-- Создание и редактирование событий
-- Публикация и отклонение событий администратором
-- Поиск событий по параметрам
-- Управление категориями событий
-- Создание подборок событий
-- Подача и обработка заявок на участие
-- Подтверждение или отклонение заявок инициатором события
-- Сбор статистики просмотров
-- Получение аналитики по посещаемости
+- Docker Compose
 
 ## Архитектура
 
-Проект построен как многомодульное Maven-приложение.
+Внешние запросы принимает Gateway на порту `8080`. Он сохраняет прежний REST API и направляет запросы в нужный сервис через Eureka.
 
-Основные слои приложения:
+Прикладная часть находится в `core`:
 
-- `controller` — REST API
-- `service` — бизнес-логика
-- `repository` — доступ к данным
-- `model` — JPA-сущности
-- `dto` — входные и выходные модели API
-- `mapper` — преобразование между DTO и entity
-- `exception` — обработка ошибок
+- `event-service` — события, категории и подборки;
+- `request-service` — заявки на участие;
+- `user-service` — пользователи;
+- `comment-service` — комментарии;
+- `common` — общие DTO внешнего и внутреннего API;
+- `main-service` — точка запуска без бизнес-логики.
 
-## Основные сущности
+У каждого прикладного сервиса своя база PostgreSQL. Таблицы разных сервисов не связаны внешними ключами. Конфигурации находятся в `infra/config-server/src/main/resources/config`.
 
-- `User` — пользователь системы
-- `Event` — событие
-- `Category` — категория события
-- `Compilation` — подборка событий
-- `ParticipationRequest` — заявка на участие
-- `EndpointHit` — запись статистики обращения к endpoint
+Инфраструктурные модули:
 
-## Примеры API
+- `infra/discovery-server` — реестр Eureka;
+- `infra/config-server` — централизованные настройки;
+- `infra/gateway-server` — маршрутизация;
+- `stats-service` — сбор статистики просмотров.
 
-### Публичный API
+## Взаимодействие сервисов
 
-```http
-GET /events
-GET /events/{id}
-GET /categories
-GET /categories/{catId}
-GET /compilations
-GET /compilations/{compId}
-```
+Сервисы обращаются друг к другу через OpenFeign и имена из Eureka.
 
-### Приватный API
+Внутренний API:
 
-```http
-POST /users/{userId}/events
-PATCH /users/{userId}/events/{eventId}
-GET /users/{userId}/events
-POST /users/{userId}/requests
-PATCH /users/{userId}/requests/{requestId}/cancel
-```
+| Метод | Адрес | Назначение |
+|---|---|---|
+| `GET` | `/internal/users/{userId}` | получить пользователя |
+| `POST` | `/internal/users` | получить пользователей одним пакетным запросом |
+| `GET` | `/internal/events/{eventId}` | получить данные события для проверок |
+| `POST` | `/internal/requests/counts` | получить количество подтверждённых заявок по списку событий |
+| `POST` | `/internal/comments/counts` | получить количество опубликованных комментариев по списку событий |
 
-### Административный API
+Счётчики заявок и комментариев загружаются пакетно, поэтому количество межсервисных запросов не зависит от числа событий. Если сервис заявок или комментариев временно недоступен, сервис событий возвращает нулевые счётчики. Для повторных вызовов и защиты от сбоев используются Spring Retry и Resilience4j.
 
-```http
-POST /admin/categories
-PATCH /admin/categories/{catId}
-DELETE /admin/categories/{catId}
+## Внешний API
 
-POST /admin/users
-GET /admin/users
-DELETE /admin/users/{userId}
+Все внешние запросы отправляются через `http://localhost:8080`.
 
-PATCH /admin/events/{eventId}
-POST /admin/compilations
-PATCH /admin/compilations/{compId}
-DELETE /admin/compilations/{compId}
-```
+- [Основной API](ewm-main-service-spec.json)
+- [API статистики](ewm-stats-service-spec.json)
 
-### Сервис статистики
+Маршруты пользователей, событий, заявок и комментариев остались совместимыми с исходным API.
 
-```http
-POST /hit
-GET /stats
-```
+## Запуск
 
-## Запуск проекта
+~~~bash
+docker compose up --build
+~~~
 
-### Через Maven
+После запуска:
 
-```bash
-mvn clean package
-```
+- Gateway: `http://localhost:8080`
+- Eureka: `http://localhost:8761`
 
-Для локального запуска сначала запустите `discovery-server`, затем `config-server`, после него `stats-server` и
-`main-service`, и последним — `gateway-server`. Eureka доступна на `http://localhost:8761`, API — на
-`http://localhost:8080`.
+Базы данных доступны локально на портах:
 
-### Через Docker Compose
+- события — `6542`;
+- пользователи — `6543`;
+- заявки — `6544`;
+- комментарии — `6545`;
+- статистика — `6541`.
 
-```bash
-docker-compose up --build
-```
+## Проверка
 
-Docker Compose публикует Eureka на порту `8761` и Gateway на порту `8080`. Остальные сервисы регистрируются в
-Eureka на случайных внутренних портах.
-
-## Проверка качества кода
-
-В проекте настроены инструменты статического анализа и проверки качества:
-
-```bash
+~~~bash
 mvn clean test
 mvn clean package -P check
-mvn clean verify -P coverage
-```
+~~~
 
-Используются:
-
-- Checkstyle
-- SpotBugs
-- JaCoCo
-
-## Что демонстрирует проект
-
-- разработку многомодульного Spring Boot backend-приложения;
-- проектирование REST API;
-- работу с PostgreSQL и Hibernate;
-- разделение приложения на публичный, приватный и административный API;
-- реализацию бизнес-логики модерации событий и заявок;
-- взаимодействие основного сервиса со статистическим сервисом;
-- Docker-контейнеризацию;
-- настройку проверки качества кода через Checkstyle, SpotBugs и JaCoCo.
+Коллекции Postman находятся в каталоге `postman`. Для основного сервиса и дополнительной функциональности нужно использовать Gateway на порту `8080`.

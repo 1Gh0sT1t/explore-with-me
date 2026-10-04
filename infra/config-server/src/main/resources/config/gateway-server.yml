@@ -9,7 +9,23 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
-        - id: main-service
-          uri: lb://main-service
+        - id: stats-server
+          uri: lb://stats-server
           predicates:
-            - Path=/events/**,/categories/**,/compilations/**,/users/**,/admin/**
+            - Path=/hit,/stats
+        - id: comment-service
+          uri: lb://comment-service
+          predicates:
+            - Path=/admin/comments/**,/events/*/comments,/events/*/comments/**,/users/*/comments,/users/*/comments/**,/users/*/events/*/comments
+        - id: request-service
+          uri: lb://request-service
+          predicates:
+            - Path=/users/*/requests,/users/*/requests/**,/users/*/events/*/requests
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/admin/users,/admin/users/**
+        - id: event-service
+          uri: lb://event-service
+          predicates:
+            - Path=/events/**,/categories/**,/compilations/**,/users/*/events,/users/*/events/**,/admin/events/**,/admin/categories/**,/admin/compilations/**

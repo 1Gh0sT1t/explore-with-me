@@ -38,11 +38,8 @@ public class RecommendationService {
         for (Similarity similarity : similarities) {
             addCandidate(similarity, new CandidateContext(recent, weights, candidates));
         }
-        List<Long> selected = candidates.entrySet().stream()
-                .sorted(Map.Entry.<Long, Double>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()))
-                .limit(limit).map(Map.Entry::getKey).toList();
         List<RecommendedEventProto> result = new ArrayList<>();
-        for (long candidate : selected) {
+        for (long candidate : candidates.keySet()) {
             List<Similarity> closest = similarities.stream()
                     .filter(pair -> pair.eventA() == candidate || pair.eventB() == candidate)
                     .filter(pair -> weights.containsKey(pair.other(candidate)))
@@ -55,7 +52,7 @@ public class RecommendationService {
                 result.add(event(candidate, numerator / denominator));
             }
         }
-        return result.stream().sorted(order()).toList();
+        return result.stream().sorted(order()).limit(limit).toList();
     }
 
     public List<RecommendedEventProto> similarEvents(SimilarEventsRequestProto request) {

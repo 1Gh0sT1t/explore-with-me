@@ -60,15 +60,14 @@ class RecommendationServiceTest {
     }
 
     @Test
-    void respectsNeighborLimitAndCandidateLimit() {
+    void respectsNeighborLimit() {
         ReflectionTestUtils.setField(service, "neighbors", 1);
         when(repository.history(1)).thenReturn(List.of(interaction(1, 1), interaction(2, 0.4)));
         when(repository.similaritiesForUser(1)).thenReturn(List.of(
                 new Similarity(1, 3, 0.7), new Similarity(2, 3, 0.9), new Similarity(1, 4, 0.8)));
-        var result = service.recommendations(1, 1);
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getEventId()).isEqualTo(3L);
-        assertThat(result.getFirst().getScore()).isEqualTo(0.4);
+        var result = service.recommendations(1, 2);
+        assertThat(result).extracting(RecommendedEventProto::getEventId).containsExactly(4L, 3L);
+        assertThat(result).extracting(RecommendedEventProto::getScore).containsExactly(1.0, 0.4);
     }
 
     @Test
@@ -96,6 +95,16 @@ class RecommendationServiceTest {
                 new Similarity(1, 3, 0.9), new Similarity(2, 4, 0.6)));
         assertThat(service.recommendations(1, 10)).extracting(RecommendedEventProto::getEventId)
                 .containsExactly(4L, 3L);
+    }
+
+    @Test
+    void appliesResultLimitAfterPredictingAllCandidates() {
+        when(repository.history(1)).thenReturn(List.of(interaction(1, 0.4), interaction(2, 1)));
+        when(repository.similaritiesForUser(1)).thenReturn(List.of(
+                new Similarity(1, 3, 0.9), new Similarity(2, 4, 0.6)));
+        var result = service.recommendations(1, 1);
+        assertThat(result).extracting(RecommendedEventProto::getEventId).containsExactly(4L);
+        assertThat(result.getFirst().getScore()).isEqualTo(1.0);
     }
 
     private Interaction interaction(long event, double weight) {

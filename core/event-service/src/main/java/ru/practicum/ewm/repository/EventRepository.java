@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 import ru.practicum.ewm.model.Event;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
 
@@ -18,4 +19,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     Page<Event> findByInitiatorId(Long initiatorId, Pageable pageable);
 
     Optional<Event> findByIdAndInitiatorId(Long id, Long initiatorId);
+
+    @Query("select e from Event e join fetch e.category where e.id in :ids")
+    List<Event> findAllWithCategoryByIdIn(List<Long> ids);
 }

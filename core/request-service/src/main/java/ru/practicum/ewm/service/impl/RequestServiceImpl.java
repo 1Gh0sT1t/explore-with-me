@@ -17,6 +17,7 @@ import ru.practicum.ewm.repository.RequestRepository;
 import ru.practicum.ewm.service.RemoteLookupService;
 import ru.practicum.ewm.service.RequestService;
 import ru.practicum.ewm.service.RequestStatusUpdater;
+import ru.practicum.ewm.service.RequestRegistrationService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +31,7 @@ public class RequestServiceImpl implements RequestService {
     private final RemoteLookupService remoteLookupService;
     private final RequestMapper requestMapper;
     private final RequestStatusUpdater requestStatusUpdater;
+    private final RequestRegistrationService registrationService;
 
     @Override
     public ParticipationRequestDto addRequest(Long userId, Long eventId) {
@@ -61,7 +63,8 @@ public class RequestServiceImpl implements RequestService {
                 .status(autoConfirm ? RequestStatus.CONFIRMED : RequestStatus.PENDING)
                 .build();
 
-        return requestMapper.toDto(requestRepository.save(request));
+        Request saved = registrationService.save(request);
+        return requestMapper.toDto(saved);
     }
 
     @Override

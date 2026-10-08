@@ -60,7 +60,7 @@ class EventServiceImplTest {
         EventDtoAssembler assembler = new EventDtoAssembler(eventMapper, remoteUserService,
                 requestClient, commentClient, statsHelperService);
         eventService = new EventServiceImpl(eventRepository, categoryRepository, eventMapper,
-                assembler, remoteUserService, statsHelperService);
+                assembler, remoteUserService, statsHelperService, requestClient);
     }
 
     @Test

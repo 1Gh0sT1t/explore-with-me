@@ -1,12 +1,15 @@
 package ru.practicum.ewm.controller.publicapi;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.ewm.dto.EventFullDto;
 import ru.practicum.ewm.dto.EventShortDto;
 import ru.practicum.ewm.dto.PublicEventSearchParams;
+import ru.practicum.ewm.dto.internal.UserEventKey;
 import ru.practicum.ewm.service.EventService;
 
 import java.util.List;
@@ -28,8 +31,8 @@ public class PublicEventController {
             @RequestParam(required = false) String rangeEnd,
             @RequestParam(defaultValue = "false") Boolean onlyAvailable,
             @RequestParam(required = false) String sort,
-            @RequestParam(defaultValue = "0") int from,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "0") @Min(0) int from,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(1000) int size,
             HttpServletRequest request
     ) {
         PublicEventSearchParams params = PublicEventSearchParams.builder()
@@ -48,7 +51,20 @@ public class PublicEventController {
     }
 
     @GetMapping("/{id}")
-    public EventFullDto getEvent(@PathVariable Long id, HttpServletRequest request) {
-        return eventService.getPublicEvent(id, request);
+    public EventFullDto getEvent(@PathVariable Long id,
+                                @RequestHeader("X-EWM-USER-ID") @Min(1) Long userId) {
+        return eventService.getPublicEvent(id, userId);
+    }
+
+    @GetMapping("/recommendations")
+    public List<EventShortDto> getRecommendations(@RequestHeader("X-EWM-USER-ID") @Min(1) Long userId,
+                                                 @RequestParam(defaultValue = "10") @Min(1) @Max(1000) int size) {
+        return eventService.getRecommendations(userId, size);
+    }
+
+    @PutMapping("/{eventId}/like")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void like(@PathVariable Long eventId, @RequestHeader("X-EWM-USER-ID") @Min(1) Long userId) {
+        eventService.likeEvent(new UserEventKey(userId, eventId));
     }
 }

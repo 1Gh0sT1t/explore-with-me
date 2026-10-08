@@ -54,13 +54,13 @@ class EventDtoAssemblerTest {
         ));
         when(requestClient.getConfirmedRequests(List.of(1L, 2L))).thenReturn(Map.of(1L, 3L, 2L, 4L));
         when(commentClient.getPublishedCommentCounts(List.of(1L, 2L))).thenReturn(Map.of(1L, 5L, 2L, 6L));
-        when(statsHelperService.getViews(List.of(first, second))).thenReturn(Map.of(1L, 7L, 2L, 8L));
+        when(statsHelperService.getRatings(List.of(first, second))).thenReturn(Map.of(1L, 7.2, 2L, 8.4));
 
         List<EventShortDto> result = assembler.toShortDtos(List.of(first, second));
 
         assertThat(result).extracting(EventShortDto::getConfirmedRequests).containsExactly(3L, 4L);
         assertThat(result).extracting(EventShortDto::getComments).containsExactly(5L, 6L);
-        assertThat(result).extracting(EventShortDto::getViews).containsExactly(7L, 8L);
+        assertThat(result).extracting(EventShortDto::getRating).containsExactly(7.2, 8.4);
         verify(requestClient, times(1)).getConfirmedRequests(anyList());
         verify(commentClient, times(1)).getPublishedCommentCounts(anyList());
         verify(remoteUserService, times(1)).getUsers(anyList());

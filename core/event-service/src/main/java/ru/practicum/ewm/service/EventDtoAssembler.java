@@ -75,7 +75,7 @@ public class EventDtoAssembler {
                 remoteUserService.getUsers(userIds),
                 confirmedRequests == null ? requestClient.getConfirmedRequests(eventIds) : confirmedRequests,
                 commentClient.getPublishedCommentCounts(eventIds),
-                statsHelperService.getViews(events)
+                statsHelperService.getRatings(events)
         );
     }
 
@@ -94,20 +94,20 @@ public class EventDtoAssembler {
             Map<Long, UserDto> users,
             Map<Long, Long> requests,
             Map<Long, Long> comments,
-            Map<Long, Long> views
+            Map<Long, Double> ratings
     ) {
         private void fill(EventShortDto dto, Event event) {
             dto.setInitiator(user(event, users));
             dto.setConfirmedRequests(requests.getOrDefault(event.getId(), 0L));
             dto.setComments(comments.getOrDefault(event.getId(), 0L));
-            dto.setViews(views.getOrDefault(event.getId(), 0L));
+            dto.setRating(ratings.getOrDefault(event.getId(), 0.0));
         }
 
         private void fill(EventFullDto dto, Event event) {
             dto.setInitiator(user(event, users));
             dto.setConfirmedRequests(requests.getOrDefault(event.getId(), 0L));
             dto.setComments(comments.getOrDefault(event.getId(), 0L));
-            dto.setViews(views.getOrDefault(event.getId(), 0L));
+            dto.setRating(ratings.getOrDefault(event.getId(), 0.0));
         }
     }
 }

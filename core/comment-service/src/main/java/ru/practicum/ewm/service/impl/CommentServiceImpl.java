@@ -22,7 +22,6 @@ import ru.practicum.ewm.model.CommentStatus;
 import ru.practicum.ewm.repository.CommentRepository;
 import ru.practicum.ewm.service.CommentService;
 import ru.practicum.ewm.service.RemoteLookupService;
-import ru.practicum.ewm.service.StatsHelperService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,7 +34,6 @@ public class CommentServiceImpl implements CommentService {
     private final CommentRepository commentRepository;
     private final CommentMapper commentMapper;
     private final RemoteLookupService remoteLookupService;
-    private final StatsHelperService statsHelperService;
 
     @Override
     public CommentDto addComment(UserEventKey key, NewCommentDto newCommentDto) {
@@ -103,7 +101,6 @@ public class CommentServiceImpl implements CommentService {
         List<CommentDto> comments = toDtos(commentRepository
                 .findByEventIdAndStatus(eventId, CommentStatus.PUBLISHED, params.pageable())
                 .getContent());
-        statsHelperService.hit(request);
         return comments;
     }
 
@@ -116,7 +113,6 @@ public class CommentServiceImpl implements CommentService {
         if (comment.getStatus() != CommentStatus.PUBLISHED) {
             throw new NotFoundException("Comment with id=" + commentId + " was not found");
         }
-        statsHelperService.hit(request);
         return toDtos(List.of(comment)).getFirst();
     }
 
